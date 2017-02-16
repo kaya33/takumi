@@ -30,7 +30,7 @@ hook_registry = _HookRegistry()
 
 
 def register_hook(event):
-    """Register a hook. Hook is defined as a function with empty arguments.
+    """Register a hook. Hook is defined as a function.
 
     :param event: event name
     """

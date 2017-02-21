@@ -12,7 +12,7 @@ Hook definition:
 """
 
 import sys
-import logging
+import logging.config
 from copy import deepcopy
 
 from .hook import define_hook

@@ -123,6 +123,8 @@ def test_config_log(mock_hook_registry, monkeypatch):
 
     monkeypatch.setattr(sys, 'platform', 'linux')
 
+    config_log_func = config_log.func
+
     def _mock():
         mock_dict_config = mock.Mock()
         monkeypatch.setattr(logging.config, 'dictConfig', mock_dict_config)
@@ -137,14 +139,14 @@ def test_config_log(mock_hook_registry, monkeypatch):
         mock_config.env.name = 'dev'
 
         a, b, c = _mock()
-        config_log()
+        config_log_func()
         a.assert_called()
         b.assert_called_with('test_app')
         c.assert_not_called()
 
         mock_config.env.name = 'prod'
         a, b, c = _mock()
-        config_log()
+        config_log_func()
         a.assert_called()
         b.assert_not_called()
         c.assert_called_with('test_app')

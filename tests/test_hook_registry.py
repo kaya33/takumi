@@ -4,11 +4,12 @@ import pytest
 
 
 def test_registry():
-    from takumi_service.hook import register_hook, hook_registry
+    from takumi_service.hook import hook_registry, define_hook
 
-    @register_hook(event='test_registry_hook')
+    @define_hook(event='test_registry_hook')
     def demo_hook(hello, world):
         return ' '.join([hello, world])
+    hook_registry.register(demo_hook)
 
     ret = hook_registry.on_test_registry_hook('hello', 'world')
     assert ret == ['hello world']

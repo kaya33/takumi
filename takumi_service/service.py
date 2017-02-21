@@ -10,6 +10,10 @@ Available hooks:
 
     - before_api_call  Hooks to be executed before api called.
     - api_called       Hooks to be executed after api called.
+
+Registered hooks:
+
+    - api_called
 """
 
 import functools
@@ -26,9 +30,11 @@ from thriftpy.protocol import TBinaryProtocolFactory
 
 from takumi_config import config
 
-# Register api hooks
-import takumi_service.hook.api as _api  # noqa
 from .hook import hook_registry
+from .hook.api import api_called
+
+# register api hook
+hook_registry.register(api_called)
 
 
 class Context(dict):
@@ -251,6 +257,14 @@ class ServiceHandler(ServiceModule):
             api_conf = deepcopy(self.conf)
             api_conf.update(handler.conf)
             self.add_api(api_name, handler.func, api_conf)
+
+    @staticmethod
+    def use(hook):
+        """Apply hook for this app
+
+        :param hook: a :class:`takumi_service.hook.Hook` instance
+        """
+        hook_registry.register(hook)
 
     def __call__(self):
         """Make it callable

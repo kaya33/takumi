@@ -10,6 +10,20 @@ For registering hooks.
 import collections
 
 
+class Hook(object):
+    """Represent a hook
+
+    :param event: event name
+    :param func: callback function
+    """
+    def __init__(self, event, func):
+        self.event = event
+        self.func = func
+
+    def __call__(self, *args, **kwargs):
+        self.func(*args, **kwargs)
+
+
 class _HookRegistry(object):
     """Hook registry.
 
@@ -26,15 +40,21 @@ class _HookRegistry(object):
         return lambda *args, **kwargs: [hook(*args, **kwargs)
                                         for hook in hooks]
 
+    def register(self, hook):
+        """Register a hook
+
+        :param hook: a :class:`Hook` instance
+        """
+        self._registry[hook.event].append(hook.func)
+
 hook_registry = _HookRegistry()
 
 
-def register_hook(event):
-    """Register a hook. Hook is defined as a function.
+def define_hook(event):
+    """Utility for hook definition
 
     :param event: event name
     """
     def deco(func):
-        _HookRegistry._registry[event].append(func)
-        return func
+        return Hook(event, func)
     return deco

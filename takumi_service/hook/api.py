@@ -9,7 +9,7 @@ Implement api related hooks.
 
 import gevent
 from itertools import starmap, chain
-from . import register_hook
+from . import define_hook
 
 
 def _args(args, kwargs):
@@ -17,7 +17,7 @@ def _args(args, kwargs):
     return ','.join(spec)
 
 
-@register_hook(event='api_called')
+@define_hook(event='api_called')
 def api_called(ctx):
     logger = ctx.logger
     cost = (ctx.end_at - ctx.start_at) * 1000

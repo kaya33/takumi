@@ -6,7 +6,7 @@ takumi_service.log
 
 This module implements log configuration.
 
-Implemented hooks:
+Hook definition:
 
     - init_process  Config logs
 """
@@ -15,7 +15,7 @@ import sys
 import logging
 from copy import deepcopy
 
-from .hook import register_hook
+from .hook import define_hook
 
 CONF = {
     'version': 1,
@@ -72,7 +72,7 @@ def _syslog(name):
     return conf
 
 
-@register_hook(event='init_process')
+@define_hook(event='after_load')
 def config_log():
     """Config log according to app name and environment.
     """

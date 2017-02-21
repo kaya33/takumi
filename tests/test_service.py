@@ -83,3 +83,16 @@ def test_extend(mock_config):
 
     app.extend(mod)
     assert app.api_map['ping'].func is ping
+
+
+def test_use_hook(mock_config):
+    from takumi_service.service import ServiceHandler
+    from takumi_service.hook import define_hook, hook_registry
+    app = ServiceHandler('TestService')
+
+    @define_hook(event='test_hook')
+    def test_hook():
+        return 'hello world'
+
+    app.use(test_hook)
+    assert hook_registry.on_test_hook() == ['hello world']

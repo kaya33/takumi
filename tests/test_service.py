@@ -69,3 +69,17 @@ def test_service_handler(mock_config):
     assert handler.api_map['ping2'].func is ping2
     assert handler.api_map['ping2'].conf['soft_timeout'] == 15
     assert handler.service_name == 'TestService'
+
+
+def test_extend(mock_config):
+    from takumi_service.service import ServiceHandler, ServiceModule
+
+    app = ServiceHandler('TestService')
+    mod = ServiceModule()
+
+    @mod.api
+    def ping():
+        return 'pong'
+
+    app.extend(mod)
+    assert app.api_map['ping'].func is ping

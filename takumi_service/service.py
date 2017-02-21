@@ -17,6 +17,7 @@ import gevent
 import logging
 import os.path
 import time
+from copy import deepcopy
 
 from thriftpy import load
 from thriftpy.thrift import TProcessorFactory, TProcessor
@@ -186,7 +187,43 @@ class _Handler(object):
         return self.func(*args, **kwargs)
 
 
-class ServiceHandler(object):
+class ServiceModule(object):
+    """This class makes it convinent to implement api in different modules.
+    """
+    def __init__(self, **kwargs):
+        self.conf = kwargs
+        self.api_map = {}
+
+    def add_api(self, name, func, conf):
+        """Add an api
+
+        :param name: api name
+        :param func: function implement the api
+        :param conf: api configuration
+        """
+        self.api_map[name] = _Handler(func, conf)
+
+    def api(self, name=None, **conf):
+        """Used to register a handler func.
+
+        :param name: alternative api name, the default name is function name
+        """
+        api_conf = deepcopy(self.conf)
+        api_conf.update(conf)
+
+        # Direct decoration
+        if callable(name):
+            self.add_api(name.__name__, name, api_conf)
+            return name
+
+        def deco(func):
+            api_name = name or func.__name__
+            self.add_api(api_name, func, api_conf)
+            return func
+        return deco
+
+
+class ServiceHandler(ServiceModule):
     """Takumi service handler.
 
     This class is used to define a Takumi app.
@@ -199,34 +236,21 @@ class ServiceHandler(object):
     def ping():
         return 'pong'
     """
-    def __init__(self, service_name, soft_timeout=3, hard_timeout=20):
-        self.api_map = {}
+    def __init__(self, service_name, soft_timeout=3, hard_timeout=20,
+                 **kwargs):
         self.service_name = service_name
-        self.soft_timeout = soft_timeout
-        self.hard_timeout = hard_timeout
+        super(ServiceHandler, self).__init__(
+            soft_timeout=soft_timeout, hard_timeout=hard_timeout, **kwargs)
 
-    def _add_api(self, name, func, conf):
-        self.api_map[name] = _Handler(func, conf)
+    def extend(self, module):
+        """Extend app with another service module
 
-    def api(self, name=None, **conf):
-        """Used to register a handler func.
-
-        :param name: alternative api name, the default name is function name
+        :param module: instance of :class:`ServiceModule`
         """
-        # Set timeout
-        conf.setdefault('soft_timeout', self.soft_timeout)
-        conf.setdefault('hard_timeout', self.hard_timeout)
-
-        # Direct decoration
-        if callable(name):
-            self._add_api(name.__name__, name, conf)
-            return name
-
-        def deco(func):
-            api_name = name or func.__name__
-            self._add_api(api_name, func, conf)
-            return func
-        return deco
+        for api_name, handler in module.api_map.items():
+            api_conf = deepcopy(self.conf)
+            api_conf.update(handler.conf)
+            self.add_api(api_name, handler.func, api_conf)
 
     def __call__(self):
         """Make it callable

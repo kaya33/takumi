@@ -80,7 +80,6 @@ class TakumiService(object):
     def __init__(self):
         self.context = Context()
         self.handler = None
-        self.thrift_module = None
         self.service_def = None
 
     def set_handler(self, handler):
@@ -92,14 +91,7 @@ class TakumiService(object):
         """
 
         self.api_map = ApiMap(handler, self.context)
-
-        module_name, _ = os.path.splitext(os.path.basename(config.thrift_file))
-        # module name should ends with '_thrift'
-        if not module_name.endswith('_thrift'):
-            module_name = ''.join([module_name, '_thrift'])
-
-        self.thrift_module = load(config.thrift_file, module_name=module_name)
-        self.service_def = getattr(self.thrift_module, handler.service_name)
+        self.service_def = getattr(handler.thrift_module, handler.service_name)
 
     def run(self, sock):
         """The main run loop for the service.
@@ -279,6 +271,12 @@ class ServiceHandler(ServiceModule):
         self.system_exc_handler = self._default_exception_handler
         self.api_exc_handler = self._default_exception_handler
         self.thrift_exc_handler = self._default_exception_handler
+
+        module_name, _ = os.path.splitext(os.path.basename(config.thrift_file))
+        # module name should ends with '_thrift'
+        if not module_name.endswith('_thrift'):
+            module_name = ''.join([module_name, '_thrift'])
+        self.thrift_module = load(config.thrift_file, module_name=module_name)
 
     @staticmethod
     def _default_exception_handler(tp, val, tb):

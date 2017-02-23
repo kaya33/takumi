@@ -27,7 +27,7 @@ def test_service(mock_config):
     assert 'ping' in m
     assert m['ping'].func is ping
     assert m['ping'].conf == {'hard_timeout': 20, 'soft_timeout': 3}
-    assert getattr(service.thrift_module, 'TestService') is service.service_def
+    assert getattr(handler.thrift_module, 'TestService') is service.service_def
 
 
 def test_api_map(mock_config):

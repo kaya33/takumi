@@ -10,21 +10,24 @@ Available hooks:
 
     - before_api_call  Hooks to be executed before api called.
     - api_called       Hooks to be executed after api called.
+    - api_timeout      Hooks to be executed after api call timeout.
 
 Registered hooks:
 
     - api_called
 """
 
+import contextlib
 import functools
 import gevent
 import logging
 import os.path
+import sys
 import time
 from copy import deepcopy
 
 from thriftpy import load
-from thriftpy.thrift import TProcessorFactory, TProcessor
+from thriftpy.thrift import TProcessorFactory, TProcessor, TException
 from thriftpy.transport import TBufferedTransportFactory
 from thriftpy.protocol import TBinaryProtocolFactory
 
@@ -32,9 +35,18 @@ from takumi_config import config
 
 from .hook import hook_registry
 from .hook.api import api_called
+from ._compat import reraise
 
 # register api hook
 hook_registry.register(api_called)
+
+
+@contextlib.contextmanager
+def _ignore_exception(logger):
+    try:
+        yield
+    except Exception as e:
+        logger.exception(e)
 
 
 class Context(dict):
@@ -79,7 +91,7 @@ class TakumiService(object):
         :param handler: a :class:`ServiceHandler` instance
         """
 
-        self.api_map = ApiMap(handler.api_map, self.context)
+        self.api_map = ApiMap(handler, self.context)
 
         module_name, _ = os.path.splitext(os.path.basename(config.thrift_file))
         # module name should ends with '_thrift'
@@ -116,11 +128,17 @@ class TakumiService(object):
 
 class ApiMap(object):
     """Record service handlers.
+
+    :param handler: a :class:`ServiceHandler` instance
+    :param env: environment context for this api map
     """
-    def __init__(self, api_map, env):
-        self.__map = api_map
+    def __init__(self, handler, env):
+        self.__map = handler.api_map
         self.__ctx = Context()
         self.__ctx.env = env
+        self.__system_exc_handler = handler.system_exc_handler
+        self.__api_exc_handler = handler.api_exc_handler
+        self.__thrift_exc_handler = handler.thrift_exc_handler
 
     def __setitem__(self, attr, item):
         self.__map[attr] = item
@@ -148,21 +166,32 @@ class ApiMap(object):
         ctx.exc = None
 
         # Before api call hook
-        hook_registry.on_before_api_call(ctx)
+        try:
+            hook_registry.on_before_api_call(ctx)
+        except Exception:
+            reraise(*self.__system_exc_handler(*sys.exc_info()))
 
         try:
             with gevent.Timeout(ctx.hard_timeout):
                 ret = handler(*args, **kwargs)
                 ctx.return_value = ret
                 return ret
+        except TException as e:
+            ctx.exc = e
+            reraise(*self.__thrift_exc_handler(*sys.exc_info()))
+        except gevent.Timeout as e:
+            ctx.exc = e
+            with _ignore_exception(ctx.logger):
+                hook_registry.on_api_timeout(ctx)
+            reraise(*self.__system_exc_handler(*sys.exc_info()))
         except Exception as e:
             ctx.exc = e
-            raise
+            reraise(*self.__api_exc_handler(*sys.exc_info()))
         finally:
             ctx.end_at = time.time()
-
             # After api call hook
-            hook_registry.on_api_called(ctx)
+            with _ignore_exception(ctx.logger):
+                hook_registry.on_api_called(ctx)
 
     def __getattr__(self, api_name):
         if api_name not in self.__map:
@@ -247,6 +276,13 @@ class ServiceHandler(ServiceModule):
         self.service_name = service_name
         super(ServiceHandler, self).__init__(
             soft_timeout=soft_timeout, hard_timeout=hard_timeout, **kwargs)
+        self.system_exc_handler = self._default_exception_handler
+        self.api_exc_handler = self._default_exception_handler
+        self.thrift_exc_handler = self._default_exception_handler
+
+    @staticmethod
+    def _default_exception_handler(tp, val, tb):
+        return tp, val, tb
 
     def extend(self, module):
         """Extend app with another service module
@@ -265,6 +301,41 @@ class ServiceHandler(ServiceModule):
         :param hook: a :class:`takumi_service.hook.Hook` instance
         """
         hook_registry.register(hook)
+
+    def handle_system_exception(self, func):
+        """Set system exception handler
+
+        :param func: the function to handle system exceptions
+        """
+        self.system_exc_handler = func
+        return func
+
+    def handle_api_exception(self, func):
+        """Set application exception handler
+
+        :Example:
+
+        .. code-block:: python
+
+            @app.handle_api_exception
+            def app_exception(tp, value, tb):
+                exc = app_thrift.UnknownException()
+                exc.value = value
+                exc.with_traceback(tb)
+                return exc.__class__, exc, tb
+
+        :param func: the function to handle application exceptions
+        """
+        self.api_exc_handler = func
+        return func
+
+    def handle_thrift_exception(self, func):
+        """Set thrift exception handler
+
+        :param func: the function to handle thrift exceptions
+        """
+        self.thrift_exc_handler = func
+        return func
 
     def __call__(self):
         """Make it callable

@@ -31,13 +31,15 @@ def test_service(mock_config):
 
 
 def test_api_map(mock_config):
-    from takumi_service.service import ApiMap, Context
+    from takumi_service.service import ApiMap, Context, ServiceHandler
 
+    handler = ServiceHandler('TestService')
+
+    @handler.api
     def ping():
         return 'pong'
-    ping.conf = {'soft_timeout': 30, 'hard_timeout': 50}
 
-    api_map = ApiMap({'ping': ping}, Context(client_addr='127.0.0.1'))
+    api_map = ApiMap(handler, Context(client_addr='127.0.0.1'))
     assert api_map.ping() == 'pong'
 
 

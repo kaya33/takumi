@@ -26,7 +26,7 @@ def api_called(ctx):
     exc = ctx.exc
 
     meta = '[{}]'.format(ctx.env.client_addr)
-    func_info = '{}({}) {:.6}ms'.format(ctx.api_name, args, cost)
+    func_info = '{}({}) {:.6}ms'.format(ctx.api_name, args, float(cost))
 
     def with_meta(msg):
         data = [meta, func_info]

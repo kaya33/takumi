@@ -83,9 +83,7 @@ class TakumiService(object):
         self.service_def = None
 
     def set_handler(self, handler):
-        """Fill the true service handler for this service.
-
-        This function will load thrift module and set related attributes.
+        """Fill the service handler for this service.
 
         :param handler: a :class:`ServiceHandler` instance
         """
@@ -253,7 +251,8 @@ class ServiceModule(object):
 class ServiceHandler(ServiceModule):
     """Takumi service handler.
 
-    This class is used to define a Takumi app.
+    This class is used to define a Takumi app. It will load thrift module and
+    set ``thrift_module`` for thrift module attribute access.
 
     :Example:
 

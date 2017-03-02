@@ -27,12 +27,15 @@ import time
 from copy import deepcopy
 
 from thriftpy import load
-from thriftpy.thrift import TProcessorFactory, TProcessor, TException
-from thriftpy.transport import TBufferedTransportFactory
-from thriftpy.protocol import TBinaryProtocolFactory
+from thriftpy.thrift import TProcessorFactory, TException
+from thriftpy.transport import TBufferedTransport
+from thriftpy.protocol import TBinaryProtocol
 
+from gunicorn.util import load_class
 from takumi_config import config
+from takumi_thrift import Processor
 
+from .exc import CloseConnectionError
 from .hook import hook_registry
 from .hook.api import api_called
 from ._compat import reraise
@@ -67,6 +70,33 @@ class Context(dict):
         self.update(reserved)
 
 
+class TakumiBinaryProtocol(object):
+    """Thrift binary protocol wrapper
+
+    Used for ``thrift_protocol_class`` config.
+
+    :param sock: client socket
+    """
+    def __init__(self, sock):
+        self.sock = sock
+        self.trans = None
+
+    def get_proto(self):
+        """Create a TBinaryProtocol instance
+        """
+        self.trans = TBufferedTransport(self.sock)
+        return TBinaryProtocol(self.trans)
+
+    def close(self):
+        """Close underlying transport
+        """
+        if self.trans is not None:
+            try:
+                self.trans.close()
+            finally:
+                self.trans = None
+
+
 class TakumiService(object):
     """Takumi service runner.
 
@@ -96,24 +126,24 @@ class TakumiService(object):
 
         :param sock: the client socket
         """
-
         processor = TProcessorFactory(
-            TProcessor,
+            Processor,
+            self.context,
             self.service_def,
             self.api_map
         ).get_processor()
 
-        itrans = TBufferedTransportFactory().get_transport(sock)
-        iproto = TBinaryProtocolFactory().get_protocol(itrans)
-        otrans = TBufferedTransportFactory().get_transport(sock)
-        oproto = TBinaryProtocolFactory().get_protocol(otrans)
-
+        proto_class = load_class(
+            config.thrift_protocol_class or TakumiBinaryProtocol)
+        factory = proto_class(sock)
+        proto = factory.get_proto()
         try:
             while True:
-                processor.process(iproto, oproto)
+                processor.process(proto, proto)
+        except CloseConnectionError:
+            pass
         finally:
-            itrans.close()
-            otrans.close()
+            factory.close()
 
 
 class ApiMap(object):
@@ -147,6 +177,7 @@ class ApiMap(object):
         })
         ctx.soft_timeout = handler.conf['soft_timeout']
         ctx.hard_timeout = handler.conf['hard_timeout']
+        with_ctx = handler.conf.get('with_ctx', False)
 
         if ctx.hard_timeout < ctx.soft_timeout:
             ctx.logger.warning(
@@ -163,7 +194,10 @@ class ApiMap(object):
 
         try:
             with gevent.Timeout(ctx.hard_timeout):
-                ret = handler(*args, **kwargs)
+                if not with_ctx:
+                    ret = handler(*args, **kwargs)
+                else:
+                    ret = handler(ctx.env, *args, **kwargs)
                 ctx.return_value = ret
                 return ret
         except TException as e:
@@ -246,6 +280,13 @@ class ServiceModule(object):
             self.add_api(api_name, func, api_conf)
             return func
         return deco
+
+    def api_with_ctx(self, *args, **kwargs):
+        """Same as api except that the first argument of the func will
+        be api environment
+        """
+        kwargs['with_ctx'] = True
+        return self.api(*args, **kwargs)
 
 
 class ServiceHandler(ServiceModule):

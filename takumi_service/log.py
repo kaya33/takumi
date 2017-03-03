@@ -12,6 +12,7 @@ Hook definition:
 """
 
 import sys
+import logging
 import logging.config
 from copy import deepcopy
 
@@ -86,3 +87,26 @@ def config_log():
     else:
         conf = _syslog(name)
     logging.config.dictConfig(conf)
+
+
+class MetaAdapter(logging.LoggerAdapter):
+    """Add meta to logging message
+
+    meta format: [{client_name}/{client_version} {client_addr} {extra}]
+    missing component will be filled with '-'
+    """
+    def process(self, msg, kwargs):
+        if 'ctx' not in self.extra:
+            return super(MetaAdapter, self).process(msg, kwargs)
+
+        ctx = self.extra['ctx']
+        env = ctx.get('env', {})
+        meta = ctx.get('meta', {})
+        components = [
+            '/'.join((meta.get('client_name', '-'),
+                      meta.get('client_version', '-'))),
+            env.get('client_addr', '-'),
+        ]
+        if 'log_extra' in ctx:
+            components.append(ctx['log_extra'])
+        return '[{}] {}'.format(' '.join(components), msg), kwargs

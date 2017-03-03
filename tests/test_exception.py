@@ -3,6 +3,8 @@
 import pytest
 import sys
 
+from thriftpy.thrift import TApplicationException
+
 
 def test_exception_decorator(mock_config):
     from takumi_service.service import ServiceHandler
@@ -14,9 +16,16 @@ def test_exception_decorator(mock_config):
 
     app = ServiceHandler('TestService')
 
-    assert app.system_exc_handler(*exc_info) == exc_info
-    assert app.api_exc_handler(*exc_info) == exc_info
-    assert app.thrift_exc_handler(*exc_info) == exc_info
+    for t, e, tb in [
+            app.system_exc_handler(*exc_info),
+            app.api_exc_handler(*exc_info),
+            app.thrift_exc_handler(*exc_info),
+    ]:
+        assert tb == exc_info[2]
+        assert t is TApplicationException
+        assert isinstance(e, TApplicationException)
+        assert e.type == 6
+        assert e.message == 'type error'
 
     try:
         raise AttributeError

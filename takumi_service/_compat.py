@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
+from thriftpy.protocol.exc import TProtocolException
 
 PY2 = sys.version_info[0] == 2
 
@@ -13,3 +14,10 @@ else:
         if value.__traceback__ is not tb:
             raise value.with_traceback(tb)
         raise value
+
+
+try:
+    from thriftpy.protocol.cybin import ProtocolError
+    protocol_exceptions = (TProtocolException, ProtocolError)
+except ImportError:
+    protocol_exceptions = (TProtocolException,)

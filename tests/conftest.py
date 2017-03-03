@@ -13,7 +13,8 @@ class MockConfig(dict):
     __setattr__ = dict.__setitem__
 
 reserved = {
-    'thrift_file': 'tests/test.thrift'
+    'thrift_file': 'tests/test.thrift',
+    'thrift_protocol_class': ''
 }
 
 config = MockConfig(reserved)

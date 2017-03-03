@@ -116,3 +116,46 @@ def test_with_ctx(mock_config):
     handler.conf.pop('with_ctx')
     api_map.ping(1, 2, 'hello', [])
     handler.assert_called_with(1, 2, 'hello', [])
+
+
+def test_exceptions(mock_config, monkeypatch):
+    import socket
+    from takumi_service.service import TakumiService, Processor, \
+        CloseConnectionError, TakumiBinaryProtocol
+    from thriftpy.transport import TTransportException, TSocket
+    from thriftpy.protocol.exc import TProtocolException
+    service = TakumiService()
+    service.api_map = {}
+    service.context.update(
+        {'client_addr': 'localhost', 'client_port': 1, })
+
+    t_exc = TTransportException()
+    t_exc.message = 'end of file'
+    sock = TSocket()
+    sock.sock = socket.socket()
+
+    mock_close = mock.Mock()
+    monkeypatch.setattr(TakumiBinaryProtocol, 'close', mock_close)
+
+    t_exc.type = TTransportException.END_OF_FILE
+    with mock.patch.object(Processor, 'process', side_effect=t_exc):
+        service.run(sock)
+
+    service.logger = mock.Mock(exception=mock.Mock())
+    t_exc.type = TTransportException.ALREADY_OPEN
+    with mock.patch.object(Processor, 'process', side_effect=t_exc):
+        service.run(sock)
+    service.logger.exception.assert_called_with(t_exc)
+
+    p_exc = TProtocolException()
+    p_exc.type = TProtocolException.BAD_VERSION
+    with mock.patch.object(Processor, 'process', side_effect=p_exc):
+        service.run(sock)
+    service.logger.warn.assert_called_with(
+        '[%s:%s] protocol error: %s', 'localhost', 1, p_exc)
+
+    c_exc = CloseConnectionError()
+    with mock.patch.object(Processor, 'process', side_effect=c_exc):
+        service.run(sock)
+
+    mock_close.assert_called_with()

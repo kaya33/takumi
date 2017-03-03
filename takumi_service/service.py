@@ -30,7 +30,7 @@ from copy import deepcopy
 from thriftpy import load
 from thriftpy.thrift import TProcessorFactory, TException, \
     TApplicationException
-from thriftpy.transport import TBufferedTransport
+from thriftpy.transport import TBufferedTransport, TTransportException
 from thriftpy.protocol import TBinaryProtocol
 
 from gunicorn.util import load_class
@@ -40,7 +40,7 @@ from takumi_thrift import Processor
 from .exc import CloseConnectionError
 from .hook import hook_registry
 from .hook.api import api_called
-from ._compat import reraise
+from ._compat import reraise, protocol_exceptions
 from .log import MetaAdapter
 
 # register api hook
@@ -114,6 +114,7 @@ class TakumiService(object):
         self.context = Context()
         self.handler = None
         self.service_def = None
+        self.logger = logging.getLogger('takumi')
 
     def set_handler(self, handler):
         """Fill the service handler for this service.
@@ -143,6 +144,14 @@ class TakumiService(object):
         try:
             while True:
                 processor.process(proto, proto)
+        except TTransportException as e:
+            # Ignore EOF exception
+            if e.type != TTransportException.END_OF_FILE:
+                self.logger.exception(e)
+        except protocol_exceptions as e:
+            self.logger.warn(
+                '[%s:%s] protocol error: %s',
+                self.context['client_addr'], self.context['client_port'], e)
         except CloseConnectionError:
             pass
         finally:

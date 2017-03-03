@@ -15,12 +15,10 @@ setup(
     package_data={'': ['LICENSE', 'README.rst']},
     url='https://github.com/elemecreativelab/takumi-service',
     install_requires=[
+        'takumi-config',
+        'takumi-thrift',
         'gunicorn',
         'thriftpy>=0.3.9',
         'gevent>=1.2.1',
-    ],
-    dependency_links=[
-        'git+git://github.com/elemepi/takumi-config.git#egg=takumi_config',
-        'git+git://github.com/elemepi/takumi-thrift.git#egg=takumi_thrift',
     ],
 )

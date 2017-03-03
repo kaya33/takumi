@@ -1,23 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import mock
-import pytest
 
 
-def mock_register(event):
-    def deco(func):
-        return func
-    return deco
-
-
-@pytest.fixture
-def mock_hook_registry():
-    import takumi_service.hook as hook
-    with mock.patch.object(hook, 'hook_registry', mock_register):
-        yield
-
-
-def test_log_config_logger(mock_hook_registry):
+def test_log_config_logger():
     from takumi_service.log import _logger
     ret = _logger(['console'], 'WARN', propagate=False)
     assert ret == {
@@ -27,7 +13,7 @@ def test_log_config_logger(mock_hook_registry):
     }
 
 
-def test_log_console(mock_hook_registry):
+def test_log_console():
     from takumi_service.log import _console
 
     ret = _console('test_app')
@@ -65,7 +51,7 @@ def test_log_console(mock_hook_registry):
     }
 
 
-def test_log_syslog(mock_hook_registry):
+def test_log_syslog():
     from takumi_service.log import _syslog
 
     ret = _syslog('test_app')
@@ -110,7 +96,7 @@ def test_log_syslog(mock_hook_registry):
     }
 
 
-def test_config_log(mock_hook_registry, monkeypatch):
+def test_config_log(monkeypatch):
     from takumi_service.log import config_log
     import takumi_config
     import logging.config
@@ -150,3 +136,34 @@ def test_config_log(mock_hook_registry, monkeypatch):
         a.assert_called()
         b.assert_not_called()
         c.assert_called_with('test_app')
+
+
+def test_log_adapter():
+    import logging
+    from takumi_service.log import MetaAdapter
+    import sys
+    ctx = {}
+    logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
+    logger = MetaAdapter(logging.getLogger('takumi'), {'ctx': ctx})
+    logger_class = logging.getLoggerClass()
+    with mock.patch.object(logger_class, '_log') as mock_log:
+        logger.info('hello world')
+    mock_log.assert_called_with(20, '[-/- -] hello world', ())
+
+    ctx['meta'] = {
+        'client_name': 'test_client',
+        'client_version': '1.0.1'
+    }
+    ctx['env'] = {'client_addr': '127.0.0.1'}
+    with mock.patch.object(logger_class, '_log') as mock_log:
+        logger.info('hello world')
+    mock_log.assert_called_with(
+        20, '[test_client/1.0.1 127.0.0.1] hello world', ())
+
+    ctx['log_extra'] = '353456436546 xxxx yyyy'
+    with mock.patch.object(logger_class, '_log') as mock_log:
+        logger.info('hello world')
+    mock_log.assert_called_with(
+        20, '[test_client/1.0.1 127.0.0.1 353456436546 xxxx yyyy] hello world',
+        ())
+

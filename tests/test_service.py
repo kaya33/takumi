@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import mock
+
 
 def test_context(mock_config):
     from takumi_service.service import Context
@@ -98,3 +100,19 @@ def test_use_hook(mock_config):
 
     app.use(test_hook)
     assert hook_registry.on_test_hook() == ['hello world']
+
+
+def test_with_ctx(mock_config):
+    from takumi_service.service import ApiMap
+    handler = mock.Mock()
+    handler.conf = {'soft_timeout': 1, 'hard_timeout': 5, 'with_ctx': True}
+    m = mock.Mock(api_map={'ping': handler})
+    api_map = ApiMap(m, {'client_addr': 'localhost', 'meta': {'hello': '123'}})
+    api_map.ping(1, 2, 'hello', [])
+    handler.assert_called_with(
+        {'meta': {'hello': '123'}, 'client_addr': 'localhost'},
+        1, 2, 'hello', [])
+
+    handler.conf.pop('with_ctx')
+    api_map.ping(1, 2, 'hello', [])
+    handler.assert_called_with(1, 2, 'hello', [])

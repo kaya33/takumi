@@ -20,6 +20,7 @@ Registered hooks:
 import contextlib
 import functools
 import gevent
+import itertools
 import logging
 import os.path
 import sys
@@ -27,7 +28,8 @@ import time
 from copy import deepcopy
 
 from thriftpy import load
-from thriftpy.thrift import TProcessorFactory, TException
+from thriftpy.thrift import TProcessorFactory, TException, \
+    TApplicationException
 from thriftpy.transport import TBufferedTransport
 from thriftpy.protocol import TBinaryProtocol
 
@@ -39,6 +41,7 @@ from .exc import CloseConnectionError
 from .hook import hook_registry
 from .hook.api import api_called
 from ._compat import reraise
+from .log import MetaAdapter
 
 # register api hook
 hook_registry.register(api_called)
@@ -173,8 +176,9 @@ class ApiMap(object):
             'kwargs': kwargs,
             'api_name': api_name,
             'start_at': time.time(),
-            'logger': logging.getLogger(handler.__module__)
         })
+        ctx.logger = MetaAdapter(
+            logging.getLogger(handler.__module__), {'ctx': ctx})
         ctx.soft_timeout = handler.conf['soft_timeout']
         ctx.hard_timeout = handler.conf['hard_timeout']
         with_ctx = handler.conf.get('with_ctx', False)
@@ -186,31 +190,31 @@ class ApiMap(object):
 
         ctx.exc = None
 
-        # Before api call hook
         try:
-            hook_registry.on_before_api_call(ctx)
-        except Exception:
-            reraise(*self.__system_exc_handler(*sys.exc_info()))
+            # Before api call hook
+            try:
+                hook_registry.on_before_api_call(ctx)
+            except Exception as e:
+                ctx.exc = e
+                reraise(*self.__system_exc_handler(*sys.exc_info()))
 
-        try:
-            with gevent.Timeout(ctx.hard_timeout):
-                if not with_ctx:
+            try:
+                args = itertools.chain([ctx.env], args) if with_ctx else args
+                with gevent.Timeout(ctx.hard_timeout):
                     ret = handler(*args, **kwargs)
-                else:
-                    ret = handler(ctx.env, *args, **kwargs)
-                ctx.return_value = ret
-                return ret
-        except TException as e:
-            ctx.exc = e
-            reraise(*self.__thrift_exc_handler(*sys.exc_info()))
-        except gevent.Timeout as e:
-            ctx.exc = e
-            with _ignore_exception(ctx.logger):
-                hook_registry.on_api_timeout(ctx)
-            reraise(*self.__system_exc_handler(*sys.exc_info()))
-        except Exception as e:
-            ctx.exc = e
-            reraise(*self.__api_exc_handler(*sys.exc_info()))
+                    ctx.return_value = ret
+                    return ret
+            except TException as e:
+                ctx.exc = e
+                reraise(*self.__thrift_exc_handler(*sys.exc_info()))
+            except gevent.Timeout as e:
+                ctx.exc = e
+                with _ignore_exception(ctx.logger):
+                    hook_registry.on_api_timeout(ctx)
+                reraise(*self.__system_exc_handler(*sys.exc_info()))
+            except Exception as e:
+                ctx.exc = e
+                reraise(*self.__api_exc_handler(*sys.exc_info()))
         finally:
             ctx.end_at = time.time()
             # After api call hook
@@ -308,9 +312,9 @@ class ServiceHandler(ServiceModule):
         self.service_name = service_name
         super(ServiceHandler, self).__init__(
             soft_timeout=soft_timeout, hard_timeout=hard_timeout, **kwargs)
-        self.system_exc_handler = self._default_exception_handler
-        self.api_exc_handler = self._default_exception_handler
-        self.thrift_exc_handler = self._default_exception_handler
+        self.system_exc_handler = self.default_exception_handler
+        self.api_exc_handler = self.default_exception_handler
+        self.thrift_exc_handler = self.default_exception_handler
 
         module_name, _ = os.path.splitext(os.path.basename(config.thrift_file))
         # module name should ends with '_thrift'
@@ -319,8 +323,10 @@ class ServiceHandler(ServiceModule):
         self.thrift_module = load(config.thrift_file, module_name=module_name)
 
     @staticmethod
-    def _default_exception_handler(tp, val, tb):
-        return tp, val, tb
+    def default_exception_handler(tp, val, tb):
+        e = TApplicationException(TApplicationException.INTERNAL_ERROR,
+                                  message=str(val))
+        return TApplicationException, e, tb
 
     def extend(self, module):
         """Extend app with another service module

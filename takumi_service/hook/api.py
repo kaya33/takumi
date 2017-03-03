@@ -22,27 +22,23 @@ def api_called(ctx):
     logger = ctx.logger
     cost = (ctx.end_at - ctx.start_at) * 1000
     args = _args(ctx.args, ctx.kwargs)
-
-    exc = ctx.exc
-
-    meta = '[{}]'.format(ctx.env.client_addr)
     func_info = '{}({}) {:.6}ms'.format(ctx.api_name, args, float(cost))
 
-    def with_meta(msg):
-        data = [meta, func_info]
-        if msg:
-            data.insert(1, msg)
-        return ' '.join(data)
+    def _func_info(msg=None):
+        if not msg:
+            return func_info
+        return ' '.join([msg, func_info])
 
+    exc = ctx.exc
     # Success
     if not exc:
         if cost > ctx.soft_timeout:
-            logger.warn(with_meta('Soft timeout!'))
+            logger.warn(_func_info('Soft timeout!'))
         elif ctx.api_name != 'ping':
-            logger.info(with_meta(''))
+            logger.info(_func_info())
     # Gevent timeout
     elif isinstance(exc, gevent.Timeout):
-        logger.exception(with_meta('Gevent timeout!'))
+        logger.exception(_func_info('Gevent timeout!'))
     # Exceptions
     else:
-        logger.exception(with_meta('{} =>'.format(exc)))
+        logger.exception(_func_info('{} =>'.format(exc)))

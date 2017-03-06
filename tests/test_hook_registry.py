@@ -4,7 +4,9 @@ import pytest
 
 
 def test_registry():
-    from takumi_service.hook import hook_registry, define_hook
+    from takumi_service.hook import define_hook, HookRegistry
+
+    hook_registry = HookRegistry()
 
     @define_hook(event='test_registry_hook')
     def demo_hook(hello, world):
@@ -17,5 +19,5 @@ def test_registry():
     with pytest.raises(AttributeError) as exc_info:
         hook_registry.invalid_hook()
     assert str(exc_info.value) == \
-        '_HookRegistry object has no attribute invalid_hook'
+        'HookRegistry object has no attribute invalid_hook'
     assert hook_registry.on_extra_hook() == []

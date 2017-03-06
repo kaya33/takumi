@@ -38,13 +38,10 @@ from takumi_config import config
 from takumi_thrift import Processor
 
 from .exc import CloseConnectionError
-from .hook import hook_registry
+from .hook import HookRegistry
 from .hook.api import api_called
 from ._compat import reraise, protocol_exceptions
 from .log import MetaAdapter
-
-# register api hook
-hook_registry.register(api_called)
 
 
 @contextlib.contextmanager
@@ -168,6 +165,7 @@ class ApiMap(object):
         self.__map = handler.api_map
         self.__ctx = Context()
         self.__ctx.env = env
+        self.__hook = handler.hook_registry
         self.__system_exc_handler = handler.system_exc_handler
         self.__api_exc_handler = handler.api_exc_handler
         self.__thrift_exc_handler = handler.thrift_exc_handler
@@ -202,7 +200,7 @@ class ApiMap(object):
         try:
             # Before api call hook
             try:
-                hook_registry.on_before_api_call(ctx)
+                self.__hook.on_before_api_call(ctx)
             except Exception as e:
                 ctx.exc = e
                 reraise(*self.__system_exc_handler(*sys.exc_info()))
@@ -219,7 +217,7 @@ class ApiMap(object):
             except gevent.Timeout as e:
                 ctx.exc = e
                 with _ignore_exception(ctx.logger):
-                    hook_registry.on_api_timeout(ctx)
+                    self.__hook.on_api_timeout(ctx)
                 reraise(*self.__system_exc_handler(*sys.exc_info()))
             except Exception as e:
                 ctx.exc = e
@@ -228,7 +226,7 @@ class ApiMap(object):
             ctx.end_at = time.time()
             # After api call hook
             with _ignore_exception(ctx.logger):
-                hook_registry.on_api_called(ctx)
+                self.__hook.on_api_called(ctx)
 
     def __getattr__(self, api_name):
         if api_name not in self.__map:
@@ -325,6 +323,11 @@ class ServiceHandler(ServiceModule):
         self.api_exc_handler = self.default_exception_handler
         self.thrift_exc_handler = self.default_exception_handler
 
+        # init hook registry
+        self.hook_registry = HookRegistry()
+        # register api hook
+        self.hook_registry.register(api_called)
+
         module_name, _ = os.path.splitext(os.path.basename(config.thrift_file))
         # module name should ends with '_thrift'
         if not module_name.endswith('_thrift'):
@@ -347,13 +350,12 @@ class ServiceHandler(ServiceModule):
             api_conf.update(handler.conf)
             self.add_api(api_name, handler.func, api_conf)
 
-    @staticmethod
-    def use(hook):
+    def use(self, hook):
         """Apply hook for this app
 
         :param hook: a :class:`takumi_service.hook.Hook` instance
         """
-        hook_registry.register(hook)
+        self.hook_registry.register(hook)
 
     def handle_system_exception(self, func):
         """Set system exception handler

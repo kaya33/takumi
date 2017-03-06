@@ -91,7 +91,7 @@ def test_extend(mock_config):
 
 def test_use_hook(mock_config):
     from takumi_service.service import ServiceHandler
-    from takumi_service.hook import define_hook, hook_registry
+    from takumi_service.hook import define_hook
     app = ServiceHandler('TestService')
 
     @define_hook(event='test_hook')
@@ -99,7 +99,7 @@ def test_use_hook(mock_config):
         return 'hello world'
 
     app.use(test_hook)
-    assert hook_registry.on_test_hook() == ['hello world']
+    assert app.hook_registry.on_test_hook() == ['hello world']
 
 
 def test_with_ctx(mock_config):

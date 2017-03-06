@@ -49,7 +49,7 @@ def test_exception_decorator(mock_config):
     assert app.thrift_exc_handler(*exc_info) == info
 
 
-def test_before_api_call_raise_exception(mock_config, mock_hook_registry):
+def test_before_api_call_raise_exception(mock_config):
     from takumi_service.service import ServiceHandler, ApiMap, Context
     from takumi_service.hook import define_hook
 

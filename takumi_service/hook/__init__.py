@@ -24,12 +24,11 @@ class Hook(object):
         self.func(*args, **kwargs)
 
 
-class _HookRegistry(object):
+class HookRegistry(object):
     """Hook registry.
-
-    The registry is a singleton. All threads share the same registry.
     """
-    _registry = collections.defaultdict(list)
+    def __init__(self):
+        self._registry = collections.defaultdict(list)
 
     def __getattr__(self, attr):
         if not attr.startswith('on_'):
@@ -46,8 +45,6 @@ class _HookRegistry(object):
         :param hook: a :class:`Hook` instance
         """
         self._registry[hook.event].append(hook.func)
-
-hook_registry = _HookRegistry()
 
 
 def define_hook(event):

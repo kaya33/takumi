@@ -41,7 +41,7 @@ from .exc import CloseConnectionError
 from .hook import HookRegistry
 from .hook.api import api_called
 from ._compat import reraise, protocol_exceptions
-from .log import MetaAdapter
+from .log import MetaAdapter, config_log
 
 
 @contextlib.contextmanager
@@ -327,6 +327,8 @@ class ServiceHandler(ServiceModule):
         self.hook_registry = HookRegistry()
         # register api hook
         self.hook_registry.register(api_called)
+        # register log config hook
+        self.hook_registry.register(config_log)
 
         module_name, _ = os.path.splitext(os.path.basename(config.thrift_file))
         # module name should ends with '_thrift'

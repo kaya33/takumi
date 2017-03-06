@@ -6,6 +6,7 @@ import gevent
 
 def test_api_called():
     ctx = type('_ctx', (object,), {})
+    ctx.conf = {}
     ctx.logger = mock.Mock()
     ctx.end_at = 10
     ctx.start_at = 5
@@ -15,11 +16,11 @@ def test_api_called():
 
     from takumi_service.hook.api import api_called
     ctx.exc = None
-    ctx.soft_timeout = 3000
+    ctx.conf['soft_timeout'] = 3000
     api_called(ctx)
     ctx.logger.warn.assert_called_with(
         "Soft timeout! ping_api(4,'hello',name='sarah') 5000.0ms")
-    ctx.soft_timeout = 6000
+    ctx.conf['soft_timeout'] = 6000
     api_called(ctx)
     ctx.logger.info.assert_called_with(
         "ping_api(4,'hello',name='sarah') 5000.0ms")

@@ -42,7 +42,7 @@ def test_api_map(mock_config):
         return 'pong'
 
     api_map = ApiMap(handler, Context(client_addr='127.0.0.1'))
-    assert api_map.ping() == 'pong'
+    assert api_map.ping().value == 'pong'
 
 
 def test_handler(mock_config):

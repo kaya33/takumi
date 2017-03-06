@@ -32,7 +32,7 @@ def api_called(ctx):
     exc = ctx.exc
     # Success
     if not exc:
-        if cost > ctx.soft_timeout:
+        if cost > ctx.conf['soft_timeout']:
             logger.warn(_func_info('Soft timeout!'))
         elif ctx.api_name != 'ping':
             logger.info(_func_info())

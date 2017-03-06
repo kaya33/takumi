@@ -15,6 +15,7 @@ Available hooks:
 Registered hooks:
 
     - api_called
+    - config_log
 """
 
 import contextlib
@@ -35,10 +36,10 @@ from thriftpy.protocol import TBinaryProtocol
 
 from gunicorn.util import load_class
 from takumi_config import config
-from takumi_thrift import Processor
+from takumi_thrift import Processor, Response
 
 from .exc import CloseConnectionError
-from .hook import HookRegistry
+from .hook import HookRegistry, StopHook
 from .hook.api import api_called
 from ._compat import reraise, protocol_exceptions
 from .log import MetaAdapter, config_log
@@ -183,17 +184,19 @@ class ApiMap(object):
             'kwargs': kwargs,
             'api_name': api_name,
             'start_at': time.time(),
+            'conf': handler.conf,
         })
         ctx.logger = MetaAdapter(
             logging.getLogger(handler.__module__), {'ctx': ctx})
-        ctx.soft_timeout = handler.conf['soft_timeout']
-        ctx.hard_timeout = handler.conf['hard_timeout']
-        with_ctx = handler.conf.get('with_ctx', False)
 
-        if ctx.hard_timeout < ctx.soft_timeout:
+        soft_timeout = ctx.conf['soft_timeout']
+        hard_timeout = ctx.conf['hard_timeout']
+        with_ctx = ctx.conf.get('with_ctx', False)
+
+        if hard_timeout < soft_timeout:
             ctx.logger.warning(
                 'Api soft timeout {!r}s greater than hard timeout {!r}s'
-                .format(ctx.soft_timeout, ctx.hard_timeout))
+                .format(soft_timeout, hard_timeout))
 
         ctx.exc = None
 
@@ -201,14 +204,20 @@ class ApiMap(object):
             # Before api call hook
             try:
                 self.__hook.on_before_api_call(ctx)
+            except StopHook as e:
+                ret = Response(value=e.value, meta=e.meta)
+                ctx.return_value = ret
+                return ret
             except Exception as e:
                 ctx.exc = e
                 reraise(*self.__system_exc_handler(*sys.exc_info()))
 
             try:
                 args = itertools.chain([ctx.env], args) if with_ctx else args
-                with gevent.Timeout(ctx.hard_timeout):
+                with gevent.Timeout(hard_timeout):
                     ret = handler(*args, **kwargs)
+                    if not isinstance(ret, Response):
+                        ret = Response(ret)
                     ctx.return_value = ret
                     return ret
             except TException as e:

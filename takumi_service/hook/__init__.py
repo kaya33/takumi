@@ -10,6 +10,17 @@ For registering hooks.
 import collections
 
 
+class StopHook(Exception):
+    """Stop calling next hooks
+    """
+    def __init__(self, value, meta=None):
+        self.value = value
+        self.meta = meta or {}
+
+    def __repr__(self):
+        return '<StopHook value={!r} meta={!r}>'.format(self.value, self.meta)
+
+
 class Hook(object):
     """Represent a hook
 

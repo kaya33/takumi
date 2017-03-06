@@ -14,7 +14,7 @@ def test_api_called():
     ctx.kwargs = {'name': 'sarah'}
     ctx.api_name = 'ping_api'
 
-    from takumi_service.hook.api import api_called
+    from takumi.hook.api import api_called
     ctx.exc = None
     ctx.conf['soft_timeout'] = 3000
     api_called(ctx)

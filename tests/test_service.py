@@ -5,7 +5,7 @@ import time
 
 
 def test_context(mock_config):
-    from takumi_service.service import Context
+    from takumi.service import Context
     ctx = Context()
     ctx.hello = 90
     ctx.world = 'hello'
@@ -16,14 +16,13 @@ def test_context(mock_config):
 
 
 def test_service(mock_config):
-    from takumi_service.service import TakumiService, ServiceHandler
+    from takumi.service import TakumiService, ServiceHandler
     handler = ServiceHandler('TestService')
 
     @handler.api
     def ping():
         return 'pong'
 
-    mock_config.thrift_file = 'tests/test.thrift'
     service = TakumiService()
     service.set_handler(handler)
     m = service.api_map._ApiMap__map
@@ -34,7 +33,7 @@ def test_service(mock_config):
 
 
 def test_api_map(mock_config):
-    from takumi_service.service import ApiMap, Context, ServiceHandler
+    from takumi.service import ApiMap, Context, ServiceHandler
 
     handler = ServiceHandler('TestService')
 
@@ -47,7 +46,7 @@ def test_api_map(mock_config):
 
 
 def test_handler(mock_config):
-    from takumi_service.service import _Handler
+    from takumi.service import _Handler
 
     def ping():
         return 'pong'
@@ -57,7 +56,7 @@ def test_handler(mock_config):
 
 
 def test_service_handler(mock_config):
-    from takumi_service.service import ServiceHandler
+    from takumi.service import ServiceHandler
 
     handler = ServiceHandler('TestService', soft_timeout=10, hard_timeout=30)
 
@@ -77,7 +76,7 @@ def test_service_handler(mock_config):
 
 
 def test_extend(mock_config):
-    from takumi_service.service import ServiceHandler, ServiceModule
+    from takumi.service import ServiceHandler, ServiceModule
 
     app = ServiceHandler('TestService')
     mod = ServiceModule()
@@ -91,8 +90,8 @@ def test_extend(mock_config):
 
 
 def test_use_hook(mock_config):
-    from takumi_service.service import ServiceHandler
-    from takumi_service.hook import define_hook
+    from takumi.service import ServiceHandler
+    from takumi.hook import define_hook
     app = ServiceHandler('TestService')
 
     @define_hook(event='test_hook')
@@ -104,8 +103,8 @@ def test_use_hook(mock_config):
 
 
 def test_with_ctx(mock_config, monkeypatch):
-    import takumi_service.service as takumi_service
-    from takumi_service.service import ApiMap, Response
+    import takumi.service as takumi_service
+    from takumi.service import ApiMap, Response
     handler = mock.Mock(return_value='ret')
     handler.conf = {'soft_timeout': 1, 'hard_timeout': 5, 'with_ctx': True}
     m = mock.Mock(api_map={'ping': handler})
@@ -137,7 +136,7 @@ def test_with_ctx(mock_config, monkeypatch):
 
 def test_exceptions(mock_config, monkeypatch):
     import socket
-    from takumi_service.service import TakumiService, Processor, \
+    from takumi.service import TakumiService, Processor, \
         CloseConnectionError, TakumiBinaryProtocol
     from thriftpy.transport import TTransportException, TSocket
     from thriftpy.protocol.exc import TProtocolException

@@ -5,15 +5,15 @@ from setuptools import setup, find_packages
 
 
 setup(
-    name='takumi_service',
+    name='takumi',
     version='0.1.0',
-    description='Takumi service',
+    description='Takumi service framework',
     long_description=open("README.rst").read(),
     author="Eleme Lab",
     author_email="imaralla@icloud.com",
     packages=find_packages(),
     package_data={'': ['LICENSE', 'README.rst']},
-    url='https://github.com/elemecreativelab/takumi-service',
+    url='https://github.com/elemepi/takumi',
     install_requires=[
         'takumi-config',
         'takumi-thrift',

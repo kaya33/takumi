@@ -7,7 +7,7 @@ from thriftpy.thrift import TApplicationException
 
 
 def test_exception_decorator(mock_config):
-    from takumi_service.service import ServiceHandler
+    from takumi.service import ServiceHandler
 
     try:
         raise TypeError('type error')
@@ -50,8 +50,8 @@ def test_exception_decorator(mock_config):
 
 
 def test_before_api_call_raise_exception(mock_config):
-    from takumi_service.service import ServiceHandler, ApiMap, Context
-    from takumi_service.hook import define_hook
+    from takumi.service import ServiceHandler, ApiMap, Context
+    from takumi.hook import define_hook
 
     try:
         raise TypeError('type error')
@@ -80,7 +80,7 @@ def test_before_api_call_raise_exception(mock_config):
 
 
 def test_api_exception(mock_config):
-    from takumi_service.service import ServiceHandler, ApiMap, Context
+    from takumi.service import ServiceHandler, ApiMap, Context
 
     app = ServiceHandler('TestService')
 
@@ -106,7 +106,7 @@ def test_api_exception(mock_config):
 
 
 def test_thrift_exception(mock_config):
-    from takumi_service.service import ServiceHandler, ApiMap, Context
+    from takumi.service import ServiceHandler, ApiMap, Context
     from thriftpy.thrift import TException
 
     class ThriftException(TException):
@@ -134,7 +134,7 @@ def test_thrift_exception(mock_config):
 
 
 def test_timeout(mock_config):
-    from takumi_service.service import ServiceHandler, ApiMap, Context
+    from takumi.service import ServiceHandler, ApiMap, Context
     import gevent
     app = ServiceHandler('TestService', soft_timeout=0, hard_timeout=1)
 

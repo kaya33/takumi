@@ -2,7 +2,7 @@
 
 import mock
 import pytest
-import takumi_config
+from takumi_config import config
 
 
 class MockConfig(dict):
@@ -14,12 +14,17 @@ reserved = {
     'thrift_protocol_class': ''
 }
 
-config = MockConfig(reserved)
+_config = MockConfig(reserved)
+
+
+def mock_get(key, raises=False):
+    return _config.get(key)
 
 
 @pytest.fixture
-def mock_config():
-    with mock.patch.object(takumi_config, 'config', config):
+def mock_config(monkeypatch):
+    monkeypatch.setattr(config, '__setattr__', _config.__setattr__)
+    with mock.patch.object(config, 'get', mock_get):
         yield config
-    config.clear()
-    config.update(reserved)
+    _config.clear()
+    _config.update(reserved)

@@ -4,7 +4,7 @@ import mock
 
 
 def test_log_config_logger():
-    from takumi_service.log import _logger
+    from takumi.log import _logger
     ret = _logger(['console'], 'WARN', propagate=False)
     assert ret == {
         'handlers': ['console'],
@@ -14,7 +14,7 @@ def test_log_config_logger():
 
 
 def test_log_console():
-    from takumi_service.log import _console
+    from takumi.log import _console
 
     ret = _console('test_app')
     assert ret == {
@@ -52,7 +52,7 @@ def test_log_console():
 
 
 def test_log_syslog():
-    from takumi_service.log import _syslog
+    from takumi.log import _syslog
 
     ret = _syslog('test_app')
     assert ret == {
@@ -97,10 +97,10 @@ def test_log_syslog():
 
 
 def test_config_log(monkeypatch):
-    from takumi_service.log import config_log
+    from takumi.log import config_log
     import takumi_config
     import logging.config
-    import takumi_service.log
+    import takumi.log
     import sys
 
     mock_config = type('_config', (object,), {})
@@ -115,9 +115,9 @@ def test_config_log(monkeypatch):
         mock_dict_config = mock.Mock()
         monkeypatch.setattr(logging.config, 'dictConfig', mock_dict_config)
         mock_console = mock.Mock()
-        monkeypatch.setattr(takumi_service.log, '_console', mock_console)
+        monkeypatch.setattr(takumi.log, '_console', mock_console)
         mock_syslog = mock.Mock()
-        monkeypatch.setattr(takumi_service.log, '_syslog', mock_syslog)
+        monkeypatch.setattr(takumi.log, '_syslog', mock_syslog)
         return mock_dict_config, mock_console, mock_syslog
 
     with mock.patch.object(takumi_config, 'config', mock_config):
@@ -140,7 +140,7 @@ def test_config_log(monkeypatch):
 
 def test_log_adapter():
     import logging
-    from takumi_service.log import MetaAdapter
+    from takumi.log import MetaAdapter
     import sys
     ctx = {}
     logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)

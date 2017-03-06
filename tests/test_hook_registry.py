@@ -4,7 +4,7 @@ import pytest
 
 
 def test_registry():
-    from takumi_service.hook import define_hook, HookRegistry
+    from takumi.hook import define_hook, HookRegistry
 
     hook_registry = HookRegistry()
 

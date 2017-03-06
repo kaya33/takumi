@@ -185,6 +185,7 @@ class ApiMap(object):
             'api_name': api_name,
             'start_at': time.time(),
             'conf': handler.conf,
+            'meta': ctx.env['meta'],
         })
         ctx.logger = MetaAdapter(
             logging.getLogger(handler.__module__), {'ctx': ctx})
@@ -213,7 +214,7 @@ class ApiMap(object):
                 reraise(*self.__system_exc_handler(*sys.exc_info()))
 
             try:
-                args = itertools.chain([ctx.env], args) if with_ctx else args
+                args = itertools.chain([ctx], args) if with_ctx else args
                 with gevent.Timeout(hard_timeout):
                     ret = handler(*args, **kwargs)
                     if not isinstance(ret, Response):

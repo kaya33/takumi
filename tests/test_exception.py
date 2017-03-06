@@ -73,7 +73,7 @@ def test_before_api_call_raise_exception(mock_config):
     def raise_test():
         return 'should not be called'
 
-    api_map = ApiMap(app, Context({'client_addr': 'localhost'}))
+    api_map = ApiMap(app, Context({'client_addr': 'localhost', 'meta': {}}))
     with pytest.raises(TypeError) as exc:
         api_map.raise_test()
     assert str(exc.value) == 'type error'
@@ -97,7 +97,7 @@ def test_api_exception(mock_config):
     def api_unknown_raise():
         raise TypeError('type error')
 
-    api_map = ApiMap(app, Context({'client_addr': 'localhost'}))
+    api_map = ApiMap(app, Context({'client_addr': 'localhost', 'meta': {}}))
     with pytest.raises(ApiException) as exc:
         api_map.api_unknown_raise()
     assert isinstance(exc.value, ApiException)
@@ -127,7 +127,7 @@ def test_thrift_exception(mock_config):
     def thrift_raise():
         raise ThriftException('thrift raise')
 
-    api_map = ApiMap(app, Context({'client_addr': 'localhost'}))
+    api_map = ApiMap(app, Context({'client_addr': 'localhost', 'meta': {}}))
     with pytest.raises(TypeError) as exc:
         api_map.thrift_raise()
     assert str(exc.value) == 'thrift raise'
@@ -151,7 +151,7 @@ def test_timeout(mock_config):
     def timeout():
         gevent.sleep(2)
 
-    api_map = ApiMap(app, Context({'client_addr': 'localhost'}))
+    api_map = ApiMap(app, Context({'client_addr': 'localhost', 'meta': {}}))
     with pytest.raises(UnknownException) as exc:
         api_map.timeout()
     assert str(exc.value.exc) == '1 second'

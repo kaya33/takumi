@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import mock
+import time
 
 
 def test_context(mock_config):
@@ -41,7 +42,7 @@ def test_api_map(mock_config):
     def ping():
         return 'pong'
 
-    api_map = ApiMap(handler, Context(client_addr='127.0.0.1'))
+    api_map = ApiMap(handler, Context(client_addr='127.0.0.1', meta={}))
     assert api_map.ping().value == 'pong'
 
 
@@ -102,16 +103,32 @@ def test_use_hook(mock_config):
     assert app.hook_registry.on_test_hook() == ['hello world']
 
 
-def test_with_ctx(mock_config):
-    from takumi_service.service import ApiMap
-    handler = mock.Mock()
+def test_with_ctx(mock_config, monkeypatch):
+    import takumi_service.service as takumi_service
+    from takumi_service.service import ApiMap, Response
+    handler = mock.Mock(return_value='ret')
     handler.conf = {'soft_timeout': 1, 'hard_timeout': 5, 'with_ctx': True}
     m = mock.Mock(api_map={'ping': handler})
     api_map = ApiMap(m, {'client_addr': 'localhost', 'meta': {'hello': '123'}})
-    api_map.ping(1, 2, 'hello', [])
-    handler.assert_called_with(
-        {'meta': {'hello': '123'}, 'client_addr': 'localhost'},
-        1, 2, 'hello', [])
+
+    monkeypatch.setattr(takumi_service, 'MetaAdapter',
+                        mock.Mock(return_value='logger'))
+
+    with mock.patch.object(time, 'time', return_value=111):
+        api_map.ping(1, 2, 'hello', [])
+
+    handler.assert_called_with({
+        'env': {'client_addr': 'localhost', 'meta': {'hello': '123'}},
+        'conf': {'soft_timeout': 1, 'with_ctx': True, 'hard_timeout': 5},
+        'return_value': Response('ret'),
+        'meta': {'hello': '123'},
+        'logger': 'logger',
+        'api_name': 'ping',
+        'kwargs': {},
+        'exc': None,
+        'start_at': 111,
+        'args': (1, 2, 'hello', []),
+        'end_at': 111}, 1, 2, 'hello', [])
 
     handler.conf.pop('with_ctx')
     api_map.ping(1, 2, 'hello', [])

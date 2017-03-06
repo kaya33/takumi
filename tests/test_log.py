@@ -166,4 +166,3 @@ def test_log_adapter():
     mock_log.assert_called_with(
         20, '[test_client/1.0.1 127.0.0.1 353456436546 xxxx yyyy] hello world',
         ())
-

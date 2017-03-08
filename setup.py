@@ -17,7 +17,6 @@ setup(
     install_requires=[
         'takumi-config',
         'takumi-thrift',
-        'gunicorn',
         'thriftpy>=0.3.9',
         'gevent>=1.2.1',
     ],

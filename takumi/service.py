@@ -34,7 +34,6 @@ from thriftpy.thrift import TProcessorFactory, TException, \
 from thriftpy.transport import TBufferedTransport, TTransportException
 from thriftpy.protocol import TBinaryProtocol
 
-from gunicorn.util import load_class
 from takumi_config import config
 from takumi_thrift import Processor, Response
 
@@ -135,8 +134,7 @@ class TakumiService(object):
             self.api_map
         ).get_processor()
 
-        proto_class = load_class(
-            config.thrift_protocol_class or TakumiBinaryProtocol)
+        proto_class = config.thrift_protocol_class or TakumiBinaryProtocol
         factory = proto_class(sock)
         proto = factory.get_proto()
         try:

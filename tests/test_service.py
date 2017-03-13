@@ -4,7 +4,7 @@ import mock
 import time
 
 
-def test_context(mock_config):
+def test_context():
     from takumi.service import Context
     ctx = Context()
     ctx.hello = 90
@@ -15,7 +15,7 @@ def test_context(mock_config):
     assert ctx == {'hello': 90, 'yes': 'no'}
 
 
-def test_service(mock_config):
+def test_service():
     from takumi.service import TakumiService, ServiceHandler
     handler = ServiceHandler('TestService')
 
@@ -32,7 +32,7 @@ def test_service(mock_config):
     assert getattr(handler.thrift_module, 'TestService') is service.service_def
 
 
-def test_api_map(mock_config):
+def test_api_map():
     from takumi.service import ApiMap, Context, ServiceHandler
 
     handler = ServiceHandler('TestService')
@@ -45,7 +45,7 @@ def test_api_map(mock_config):
     assert api_map.ping().value == 'pong'
 
 
-def test_handler(mock_config):
+def test_handler():
     from takumi.service import _Handler
 
     def ping():
@@ -55,7 +55,7 @@ def test_handler(mock_config):
     assert handler() == 'pong'
 
 
-def test_service_handler(mock_config):
+def test_service_handler():
     from takumi.service import ServiceHandler
 
     handler = ServiceHandler('TestService', soft_timeout=10, hard_timeout=30)
@@ -75,7 +75,7 @@ def test_service_handler(mock_config):
     assert handler.service_name == 'TestService'
 
 
-def test_extend(mock_config):
+def test_extend():
     from takumi.service import ServiceHandler, ServiceModule
 
     app = ServiceHandler('TestService')
@@ -89,7 +89,7 @@ def test_extend(mock_config):
     assert app.api_map['ping'].func is ping
 
 
-def test_use_hook(mock_config):
+def test_use_hook():
     from takumi.service import ServiceHandler
     from takumi.hook import define_hook
     app = ServiceHandler('TestService')
@@ -102,7 +102,7 @@ def test_use_hook(mock_config):
     assert app.hook_registry.on_test_hook() == ['hello world']
 
 
-def test_with_ctx(mock_config, monkeypatch):
+def test_with_ctx(monkeypatch):
     import takumi.service as takumi_service
     from takumi.service import ApiMap, Response
     handler = mock.Mock(return_value='ret')
@@ -134,7 +134,7 @@ def test_with_ctx(mock_config, monkeypatch):
     handler.assert_called_with(1, 2, 'hello', [])
 
 
-def test_exceptions(mock_config, monkeypatch):
+def test_exceptions(monkeypatch):
     import socket
     from takumi.service import TakumiService, Processor, \
         CloseConnectionError, TakumiBinaryProtocol

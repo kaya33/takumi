@@ -1,0 +1,2 @@
+app_name: test_app
+thrift_file: 'tests/test.thrift'

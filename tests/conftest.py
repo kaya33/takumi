@@ -2,29 +2,11 @@
 
 import mock
 import pytest
-from takumi_config import config
+import os
 
 
-class MockConfig(dict):
-    __getattr__ = dict.__getitem__
-    __setattr__ = dict.__setitem__
-
-reserved = {
-    'thrift_file': 'tests/test.thrift',
-    'thrift_protocol_class': ''
-}
-
-_config = MockConfig(reserved)
-
-
-def mock_get(key, raises=False):
-    return _config.get(key)
-
-
-@pytest.fixture
-def mock_config(monkeypatch):
-    monkeypatch.setattr(config, '__setattr__', _config.__setattr__)
-    with mock.patch.object(config, 'get', mock_get):
-        yield config
-    _config.clear()
-    _config.update(reserved)
+@pytest.fixture(autouse=True)
+def app_yaml():
+    with mock.patch.dict(os.environ,
+                         {'TAKUMI_APP_CONFIG_PATH': 'tests/app.yaml'}):
+        yield

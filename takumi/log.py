@@ -80,7 +80,7 @@ def config_log():
     from takumi_config import config
 
     name = config.app_name
-    env = config.env.name
+    env = config.env
 
     if env == 'dev' or sys.platform == 'darwin' or config.syslog_disabled:
         conf = _console(name)

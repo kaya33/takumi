@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import mock
+import os
 
 
 def test_log_config_logger():
@@ -98,14 +99,9 @@ def test_log_syslog():
 
 def test_config_log(monkeypatch):
     from takumi.log import config_log
-    import takumi_config
     import logging.config
     import takumi.log
     import sys
-
-    mock_config = type('_config', (object,), {})
-    mock_config.syslog_disabled = False
-    mock_config.env = type('_env', (object,), {})
 
     monkeypatch.setattr(sys, 'platform', 'linux')
 
@@ -120,17 +116,13 @@ def test_config_log(monkeypatch):
         monkeypatch.setattr(takumi.log, '_syslog', mock_syslog)
         return mock_dict_config, mock_console, mock_syslog
 
-    with mock.patch.object(takumi_config, 'config', mock_config):
-        mock_config.app_name = 'test_app'
-        mock_config.env.name = 'dev'
+    a, b, c = _mock()
+    config_log_func()
+    a.assert_called()
+    b.assert_called_with('test_app')
+    c.assert_not_called()
 
-        a, b, c = _mock()
-        config_log_func()
-        a.assert_called()
-        b.assert_called_with('test_app')
-        c.assert_not_called()
-
-        mock_config.env.name = 'prod'
+    with mock.patch.dict(os.environ, {'TAKUMI_ENV': 'prod'}):
         a, b, c = _mock()
         config_log_func()
         a.assert_called()

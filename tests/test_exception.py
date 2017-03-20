@@ -19,13 +19,17 @@ def test_exception_decorator():
     for t, e, tb in [
             app.system_exc_handler(*exc_info),
             app.api_exc_handler(*exc_info),
-            app.thrift_exc_handler(*exc_info),
     ]:
         assert tb == exc_info[2]
         assert t is TApplicationException
         assert isinstance(e, TApplicationException)
         assert e.type == 6
         assert e.message == 'type error'
+
+    t, e, tb = app.thrift_exc_handler(*exc_info)
+    assert tb == exc_info[2]
+    assert t is TypeError
+    assert isinstance(e, TypeError)
 
     try:
         raise AttributeError

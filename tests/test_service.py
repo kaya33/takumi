@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import pytest
 import mock
 import time
 
@@ -17,7 +18,7 @@ def test_context():
 
 def test_service():
     from takumi.service import TakumiService, ServiceHandler
-    handler = ServiceHandler('TestService')
+    handler = ServiceHandler('TestService', hard_timeout=20, soft_timeout=3)
 
     @handler.api
     def ping():
@@ -33,16 +34,35 @@ def test_service():
 
 
 def test_api_map():
-    from takumi.service import ApiMap, Context, ServiceHandler
+    from takumi.service import ApiMap, Context, ServiceHandler,\
+        SOFT_TIMEOUT, HARD_TIMEOUT, TApplicationException
+    from takumi.hook import define_hook
 
     handler = ServiceHandler('TestService')
+
+    @define_hook(event='before_api_call')
+    def _test_ctx(ctx):
+        for key in ('args', 'kwargs', 'api_name', 'start_at', 'conf',
+                    'meta', 'logger', 'exc'):
+            assert key in ctx
+        assert ctx.conf['soft_timeout'] == SOFT_TIMEOUT
+        assert ctx.conf['hard_timeout'] == HARD_TIMEOUT
+        assert ctx.meta == {}
+
+    handler.use(_test_ctx)
 
     @handler.api
     def ping():
         return 'pong'
 
     api_map = ApiMap(handler, Context(client_addr='127.0.0.1', meta={}))
+    ctx = api_map._ApiMap__ctx
     assert api_map.ping().value == 'pong'
+    assert list(ctx.keys()) == ['env']
+
+    with pytest.raises(TApplicationException) as e:
+        api_map.missing()
+    assert str(e.value) == "API 'missing' undefined"
 
 
 def test_handler():
@@ -104,11 +124,12 @@ def test_use_hook():
 
 def test_with_ctx(monkeypatch):
     import takumi.service as takumi_service
-    from takumi.service import ApiMap, Response
+    from takumi.service import ApiMap
     handler = mock.Mock(return_value='ret')
     handler.conf = {'soft_timeout': 1, 'hard_timeout': 5, 'with_ctx': True}
     m = mock.Mock(api_map={'ping': handler})
     api_map = ApiMap(m, {'client_addr': 'localhost', 'meta': {'hello': '123'}})
+    ctx = api_map._ApiMap__ctx
 
     monkeypatch.setattr(takumi_service, 'MetaAdapter',
                         mock.Mock(return_value='logger'))
@@ -116,18 +137,7 @@ def test_with_ctx(monkeypatch):
     with mock.patch.object(time, 'time', return_value=111):
         api_map.ping(1, 2, 'hello', [])
 
-    handler.assert_called_with({
-        'env': {'client_addr': 'localhost', 'meta': {'hello': '123'}},
-        'conf': {'soft_timeout': 1, 'with_ctx': True, 'hard_timeout': 5},
-        'return_value': Response('ret'),
-        'meta': {'hello': '123'},
-        'logger': 'logger',
-        'api_name': 'ping',
-        'kwargs': {},
-        'exc': None,
-        'start_at': 111,
-        'args': (1, 2, 'hello', []),
-        'end_at': 111}, 1, 2, 'hello', [])
+    handler.assert_called_with(ctx, 1, 2, 'hello', [])
 
     handler.conf.pop('with_ctx')
     api_map.ping(1, 2, 'hello', [])

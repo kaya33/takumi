@@ -44,12 +44,16 @@ from ._compat import reraise, protocol_exceptions
 from .log import MetaAdapter, config_log
 
 
+SOFT_TIMEOUT = 3
+HARD_TIMEOUT = 20
+
+
 @contextlib.contextmanager
-def _ignore_exception(logger):
+def _ignore_hook_exception(logger):
     try:
         yield
     except Exception as e:
-        logger.exception(e)
+        logger.warning('Ignore hook function exception: %s', e, exc_info=True)
 
 
 class Context(dict):
@@ -174,19 +178,14 @@ class ApiMap(object):
 
     def __call(self, api_name, handler, *args, **kwargs):
         ctx = self.__ctx
-
-        # Clear context except env
-        ctx.clear_except('env')
-        ctx.update({
-            'args': args,
-            'kwargs': kwargs,
-            'api_name': api_name,
-            'start_at': time.time(),
-            'conf': handler.conf,
-            'meta': ctx.env['meta'],
-        })
+        ctx.update(args=args, kwargs=kwargs, api_name=api_name,
+                   start_at=time.time(), conf=handler.conf,
+                   meta=ctx.env['meta'])
         ctx.logger = MetaAdapter(
             logging.getLogger(handler.__module__), {'ctx': ctx})
+
+        ctx.conf.setdefault('soft_timeout', SOFT_TIMEOUT)
+        ctx.conf.setdefault('hard_timeout', HARD_TIMEOUT)
 
         soft_timeout = ctx.conf['soft_timeout']
         hard_timeout = ctx.conf['hard_timeout']
@@ -224,7 +223,7 @@ class ApiMap(object):
                 reraise(*self.__thrift_exc_handler(*sys.exc_info()))
             except gevent.Timeout as e:
                 ctx.exc = e
-                with _ignore_exception(ctx.logger):
+                with _ignore_hook_exception(ctx.logger):
                     self.__hook.on_api_timeout(ctx)
                 reraise(*self.__system_exc_handler(*sys.exc_info()))
             except Exception as e:
@@ -233,14 +232,14 @@ class ApiMap(object):
         finally:
             ctx.end_at = time.time()
             # After api call hook
-            with _ignore_exception(ctx.logger):
+            with _ignore_hook_exception(ctx.logger):
                 self.__hook.on_api_called(ctx)
+            # Clear context
+            ctx.clear_except('env')
 
     def __getattr__(self, api_name):
-        if api_name not in self.__map:
-            raise AttributeError('{!r} object has no attribute {!r}'.format(
-                self.__class__.__name__, api_name))
-        return functools.partial(self.__call, api_name, self.__map[api_name])
+        func = self.__map.get(api_name, _Handler.undefined(api_name))
+        return functools.partial(self.__call, api_name, func)
 
 
 class _Handler(object):
@@ -263,6 +262,16 @@ class _Handler(object):
         """Delegate to the true function.
         """
         return self.func(*args, **kwargs)
+
+    @classmethod
+    def undefined(cls, api_name):
+        """Generate an undefined api handler
+        """
+        def temp_func(*args, **kwargs):
+            raise TApplicationException(
+                TApplicationException.UNKNOWN_METHOD,
+                message='API {!r} undefined'.format(api_name))
+        return cls(temp_func, {})
 
 
 class ServiceModule(object):
@@ -322,14 +331,13 @@ class ServiceHandler(ServiceModule):
     def ping():
         return 'pong'
     """
-    def __init__(self, service_name, soft_timeout=3, hard_timeout=20,
-                 **kwargs):
+    def __init__(self, service_name, **kwargs):
         self.service_name = service_name
-        super(ServiceHandler, self).__init__(
-            soft_timeout=soft_timeout, hard_timeout=hard_timeout, **kwargs)
+        super(ServiceHandler, self).__init__(**kwargs)
+
         self.system_exc_handler = self.default_exception_handler
         self.api_exc_handler = self.default_exception_handler
-        self.thrift_exc_handler = self.default_exception_handler
+        self.thrift_exc_handler = lambda tp, v, tb: (tp, v, tb)
 
         # init hook registry
         self.hook_registry = HookRegistry()

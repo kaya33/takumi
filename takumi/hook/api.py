@@ -7,9 +7,9 @@ takumi_service.hook.api
 Implement api related hooks.
 """
 
-import gevent
 from itertools import starmap, chain
 from . import define_hook
+from ..exc import TimeoutException
 
 
 def _args(args, kwargs):
@@ -36,9 +36,9 @@ def api_called(ctx):
             logger.warn(_func_info('Soft timeout!'))
         elif ctx.api_name != 'ping':
             logger.info(_func_info())
-    # Gevent timeout
-    elif isinstance(exc, gevent.Timeout):
-        logger.exception(_func_info('Gevent timeout!'))
+    # Timeout
+    elif isinstance(exc, TimeoutException):
+        logger.exception(_func_info('Timeout!'))
     # Exceptions
     else:
         logger.exception(_func_info('{} =>'.format(exc)))

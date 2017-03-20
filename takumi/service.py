@@ -37,7 +37,7 @@ from thriftpy.protocol import TBinaryProtocol
 from takumi_config import config
 from takumi_thrift import Processor, Response
 
-from .exc import CloseConnectionError
+from .exc import CloseConnectionError, TimeoutException
 from .hook import HookRegistry, StopHook
 from .hook.api import api_called
 from ._compat import reraise, protocol_exceptions
@@ -212,7 +212,8 @@ class ApiMap(object):
 
             try:
                 args = itertools.chain([ctx], args) if with_ctx else args
-                with gevent.Timeout(hard_timeout):
+                with gevent.Timeout(hard_timeout,
+                                    exception=TimeoutException(hard_timeout)):
                     ret = handler(*args, **kwargs)
                     if not isinstance(ret, Response):
                         ret = Response(ret)
@@ -221,7 +222,7 @@ class ApiMap(object):
             except TException as e:
                 ctx.exc = e
                 reraise(*self.__thrift_exc_handler(*sys.exc_info()))
-            except gevent.Timeout as e:
+            except TimeoutException as e:
                 ctx.exc = e
                 with _ignore_hook_exception(ctx.logger):
                     self.__hook.on_api_timeout(ctx)

@@ -158,4 +158,4 @@ def test_timeout():
     api_map = ApiMap(app, Context({'client_addr': 'localhost', 'meta': {}}))
     with pytest.raises(UnknownException) as exc:
         api_map.timeout()
-    assert str(exc.value.exc) == '1 second'
+    assert str(exc.value.exc) == 'Timeout after 1 seconds'

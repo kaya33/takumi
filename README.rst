@@ -5,6 +5,7 @@ Takumi: Thrift service framework
     :target: https://travis-ci.org/elemepi/takumi
 
 
+
 This package defines the interfaces for writing Takumi thrift services.
 
 Install

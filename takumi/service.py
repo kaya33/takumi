@@ -61,8 +61,13 @@ class Context(dict):
 
     This class is used to track runtime informations.
     """
-    __getattr__ = dict.__getitem__
     __setattr__ = dict.__setitem__
+
+    def __getattr__(self, attr):
+        if attr not in self:
+            raise AttributeError(
+                'Context object has no attribute {!r}'.format(attr))
+        return self[attr]
 
     def clear_except(self, *keys):
         """Clear the dict except the given key.

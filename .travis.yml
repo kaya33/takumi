@@ -1,13 +1,22 @@
 language: python
-
 python:
-  - "2.7"
-  - "3.3"
-  - "3.4"
-  - "3.5"
-  - "3.6"
-
+- '2.7'
+- '3.3'
+- '3.4'
+- '3.5'
+- '3.6'
 install: pip install tox
 script: tox -e py
 notifications:
-    email: false
+  email: false
+deploy:
+  provider: pypi
+  user: Maralla
+  skip_upload_docs: true
+  distributions: sdist bdist_wheel
+  password:
+    secure: r6LEr2E94PPlhvHnLYYlbqWdYE3s0ewOALx0MKXODm/c1CYq3R67QLtotE9zwSWqmE+2aKAQXeQXsHTjS5guzBZ/QNYe8tJq5btUu/JSFuZTbSCFD31DharaQFU9dhxk7vvbQwnXzu49Jnio7PCggAZe8vkN9KeDvOIXUTpO9w5Fal2csn6/BMwqSfLUsrqq4c24Vqo09tWn/DGE6iB2hbhaovxPbgXqGLOk4ge0x667wXul76DGjjLE8PK9ous0MPyqU42HMst9+OeM6sr0I8eUjeyW/Ngl9ZEr0RMnwSJg7MfVWriuBtRqBNMjMjp5kL1KUrdLGsyqJWyY/1f3lCwrRpJoUFS4Fw8AV7rJ2fZzNP/e59sqHdgy9HRRzMAQV+pr78Zb8RKiy7IlI0/aYT5GKTaV3dqXvZIvRvUThLQLOhRZK4HvknJAFebKAVhDVV0LZXu3QdGjQZyKCL+M3Mdm0+BumrVz4Y2dMloXbCNYQMVxhdpIsK9BaiOwRJPl0Cn/T229Lq7/uzHwktzqRtOvO2tTO6P9bCpiZh3tkTZfe5x0RUcwbh2VIs+6KQwT51dQyZHuaev3WcdvjkEHv3b9cYlRBJBnGjB72jOITpARurMxxIMgX9c4k6J4NjguBpc1J9OTXI+SSV6Wl6Z19+Lv9VjvWlh/VhCs2qYolXg=
+  on:
+    tags: true
+    repo: elemepi/takumi
+    condition: "$TRAVIS_PYTHON_VERSION = 3.4"

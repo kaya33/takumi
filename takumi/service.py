@@ -172,6 +172,8 @@ class ApiMap(object):
     def __init__(self, handler, env):
         self.__map = handler.api_map
         self.__ctx = Context()
+        # Set response meta
+        env.response_meta = {}
         self.__ctx.env = env
         self.__hook = handler.hook_registry
         self.__system_exc_handler = handler.system_exc_handler
@@ -183,9 +185,13 @@ class ApiMap(object):
 
     def __call(self, api_name, handler, *args, **kwargs):
         ctx = self.__ctx
+        # Clear response meta
+        ctx.env['response_meta'].clear()
+        # Add utility attributes to ctx
         ctx.update(args=args, kwargs=kwargs, api_name=api_name,
                    start_at=time.time(), conf=handler.conf,
-                   meta=ctx.env['meta'])
+                   meta=ctx.env['meta'],
+                   response_meta=ctx.env['response_meta'])
         ctx.logger = MetaAdapter(
             logging.getLogger(handler.__module__), {'ctx': ctx})
 

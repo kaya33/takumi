@@ -124,11 +124,12 @@ def test_use_hook():
 
 def test_with_ctx(monkeypatch):
     import takumi.service as takumi_service
-    from takumi.service import ApiMap
+    from takumi.service import ApiMap, Context
     handler = mock.Mock(return_value='ret')
     handler.conf = {'soft_timeout': 1, 'hard_timeout': 5, 'with_ctx': True}
     m = mock.Mock(api_map={'ping': handler})
-    api_map = ApiMap(m, {'client_addr': 'localhost', 'meta': {'hello': '123'}})
+    api_map = ApiMap(m, Context({'client_addr': 'localhost',
+                                 'meta': {'hello': '123'}}))
     ctx = api_map._ApiMap__ctx
 
     monkeypatch.setattr(takumi_service, 'MetaAdapter',

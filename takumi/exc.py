@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-takumi_service.exc
-~~~~~~~~~~~~~~~~~~
+takumi.exc
+~~~~~~~~~~
 
 Takumi related Exceptin definitions.
 """

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-takumi_service.hook
-~~~~~~~~~~~~~~~~~~~
+takumi.hook
+~~~~~~~~~~~
 
 For registering hooks.
 """

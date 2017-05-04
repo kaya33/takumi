@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-takumi_service.hook.api
-~~~~~~~~~~~~~~~~~~~~~~~
+takumi.hook.api
+~~~~~~~~~~~~~~~
 
 Implement api related hooks.
 """

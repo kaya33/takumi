@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-takumi_service.log
-~~~~~~~~~~~~~~~~~~
+takumi.log
+~~~~~~~~~~
 
 This module implements log configuration.
 

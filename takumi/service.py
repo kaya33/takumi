@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-takumi_service.service
-~~~~~~~~~~~~~~~~~~~~~~
+takumi.service
+~~~~~~~~~~~~~~
 
 This module implements service runner and handler definition interface.
 

@@ -7,11 +7,12 @@ takumi
 Takumi thrift service framework.
 """
 
-from .service import ServiceHandler as Takumi
-from .service import ServiceModule as TakumiModule
+from .service import ServiceHandler as Takumi, ServiceModule as TakumiModule, \
+    TakumiService, Context
 from .hook import StopHook, define_hook
-from .exc import CloseConnectionError, TakumiException
+from .exc import CloseConnectionError, TakumiException, TimeoutException
 
 
-__all__ = ['Takumi', 'TakumiModule', 'StopHook', 'define_hook',
-           'CloseConnectionError', 'TakumiException']
+__all__ = ['Takumi', 'TakumiModule', 'TakumiService', 'StopHook',
+           'define_hook', 'Context', 'CloseConnectionError',
+           'TakumiException', 'TimeoutException']
